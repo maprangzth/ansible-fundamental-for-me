@@ -1,0 +1,161 @@
+# Ansible พื้นฐานที่ (ตัวเอง) ควรรู้ Ep.02 - Inventory
+
+ใน [Ep.01](https://medium.com/@maprangzth/ansible-%E0%B8%9E%E0%B8%B7%E0%B9%89%E0%B8%99%E0%B8%90%E0%B8%B2%E0%B8%99%E0%B8%97%E0%B8%B5%E0%B9%88-%E0%B8%95%E0%B8%B1%E0%B8%A7%E0%B9%80%E0%B8%AD%E0%B8%87-%E0%B8%84%E0%B8%A7%E0%B8%A3%E0%B8%A3%E0%B8%B9%E0%B9%89-ep-01-d9e25fbca5f) เราได้ทำความรู้จักกับเจ้าตัว Ansible กันเป็นที่เรียบร้อยแล้วนะครับว่า Ansible คืออะไร? และ ทำอะไรได้บ้าง? ใน Ep. นี้ เราจะมาทำความรู้จัก และทำความเข้าใจกับสิ่งที่เรียกว่า **Inventory** ซึ่งถือว่าเป็นเรื่องที่สำคัญกับคนที่หลงมารู้จักกับ Ansible และต้องเรียนรู้เป็นอันดับแรกๆ เลยก็ว่าได้ ฉะนั้น อย่ามัวรีรอไปเริ่มกันเลยครับ
+
+## Inventory คืออะไร?  
+Inventory คือ ไฟล์ๆ นึงที่ทำหน้าที่เก็บรายการของ host หรือ host groups  (ส่วนมากจะใช้เป็นไฟล์ที่ไม่มีนามสกุล เขาเรียกว่า INI file) จะให้พูดง่ายๆ มันคือ hosts file ดีๆ นี่เอง ใครใช้ Linux ก็คงจะคุ้นเคยกันดีกับไฟล์ `/etc/hosts`  
+
+เวลาที่เราเรียกใช้ Ansible ผ่าน command `ansible` หรือ `ansible-playbook` มันจะ**บังคับ**ให้เราระบุ **target host** (host ใดๆ ที่ Ansible ssh เข้าไปทำงาน จะเรียกว่า "Target host") ด้วยเสมอ แหงล่ะ! จะให้มันทำงานแต่ไม่บอกว่าให้ไปทำที่ Host ตัวไหน อันนี้สงสัยจะเพี้ยน 555+ แล้วการตั้งชื่อ host ใน Inventory มันก็จะล้ำๆ หน่อยนึง คือมีการนำ Pattern มาใช้ในการตั้งชื่อ host ได้ด้วย แถมยังสามารถยัดตัวแปรเข้าไปได้อีก เดี๋ยวไปดูกันว่ามันเป็นยังไง  
+
+## Inventory file มันอยู่ที่ไหน?  
+บางคนเกิดสงสัยเห็นบอกว่ามันคือ **hosts file** ใช่ไฟล์ `/etc/hosts` หรือเปล่า? ขอตอบเลยว่า ไม่!!! Inventory file (ต่อไปนี้ผมจะเรียกว่า Inventory file เสมอ) ค่า default ที่ Ansible เรียกใช้จะอยู่ที่ `/etc/ansible/hosts` แต่เราสามารถสร้างมันขึ้นมา และเก็บไว้ที่ไหนก็ได้ ขอแค่ตอนเรียก command `ansible` หรือ `ansible-playbook` เราต้องระบุที่อยู่ของ Inventory file ให้ถูกก็พอ ไปดูวิธี Config Inventory file กันดีกว่า  
+
+ List server ด้านล่างนี้คือ server ที่ผมมี (ใช้ LXC ในการสร้าง server ไว้ทดสอบ ใครสนใจตามไปอ่านได้ [ที่นี่](https://medium.com/@maprangzth/%E0%B9%80%E0%B8%95%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%A1-server-%E0%B8%AA%E0%B8%B3%E0%B8%AB%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B3-lab-ansible-%E0%B8%94%E0%B9%89%E0%B8%A7%E0%B8%A2-lxc-5a05ac74d16c) )  
+ 
+```
+NAME   STATE   AUTOSTART GROUPS IPV4            IPV6 
+db-01  RUNNING 0         -      192.168.124.116 -    
+db-02  RUNNING 0         -      192.168.124.172 -    
+web-01 RUNNING 0         -      192.168.124.206 -    
+web-02 RUNNING 0         -      192.168.124.52  -    
+web-03 RUNNING 0         -      192.168.124.110 - 
+```  
+
+## Inventory file Configure ยังไง?
+บอกไว้ก่อนเลยว่า การกำหนด **Target host** (หรือตั้งชื่อ host นั้นแหละ) ใน Inventory file ไม่สามารถแปะ IP แล้วก็ตามด้วย hostname ได้แบบไฟล์ `/etc/hosts` นะ ถ้าทำแบบนั้นตอนรันมันจะ **error** ทันที  
+
+กำหนดแบบนี้ไม่ได้ นะจ๊ะ (มันบาปปปป)
+```
+$ cat inventories 
+db-01  192.168.124.116
+db-02  192.168.124.172
+web-01  192.168.124.206
+web-02  192.168.124.52
+web-03  192.168.124.110
+```  
+หรือ แบบนี้ก็ไม่ได้
+```
+$ cat inventories 
+192.168.124.116  db-01
+192.168.124.172  db-02
+192.168.124.206  web-01
+192.168.124.52  web-02
+192.168.124.110  web-03
+```  
+
+### การตั้งชื่อ host ที่ถูกต้องเขาทำกันแบบนี้  
+* ใส่ IP ลอยๆ
+```
+$ cat inventories 
+192.168.124.116
+192.168.124.172
+192.168.124.206
+192.168.124.52
+192.168.124.110
+```  
+* หรือ จะใส่ hostname ไปเลยก็ยังได้
+```
+$ cat inventories
+db-01
+db-02
+web-01
+web-02
+web-03
+```  
+ข้อควรจำ:  
+```
+การระบุ hostname ไปตรงๆ นั้นจะทำได้ก็ต่อเมื่อ Controll host (host ที่รัน Ansible) ต้อง Lookup Domain Name ได้ด้วยนะครับ จะผ่าน `/etc/hosts` หรือ DNS Server ก็ได้ขอแค่ให้ได้ IP มาก็พอ
+```  
+
+### Alias name ง่ายต่อการจดจำ  
+ใช้ IP หรือ Hostname ส่งผลทำให้จำย๊าก..ยาก (ใครใช้ EC2 น่าจะเข้าใจความยาวของ domain name เป็นอย่างดี) Ansible ทำให้ง่ายได้อีก โดยเราสามารถระบุเป็น Alias name  ตามใจเราได้เลยสั้นยาวได้หมด แต่ประเภทสั้นมากแบบ A, B, C อันนี้จะทำให้จำง่าย หรือทำให้สับสนกว่าเดิมก็ไม่รู้นะครับ 555+ 
+
+```
+$ cat inventories
+db-01  ansible_host=192.168.124.116
+db-02  ansible_host=192.168.124.172
+web-01  ansible_host=192.168.124.206
+web-02  ansible_host=192.168.124.52
+web-03  ansible_host=192.168.124.110
+```  
+Alias name ที่ว่าคือ db-01, db-02, .., web-03 ส่วน _ansible_host_ เขาเรียกว่า **Host Variables**  
+
+* Host Variables ใช้กันบ่อยๆ  
+    - ansible_host คือ ระบุ IP ของ Host ใช้คู่กับการใช้ alias name
+    - ansible_port คือ ระบุ SSH port (default ใช้เป็น port 22)
+    - ansible_user คือ ระบุ user ที่ใช้ในการ ssh ค่า default จะใช้ user ปัจจุบันในการ ssh เสมอ (สามารถระบุผ่าน cammand-line หรือใน playbook ได้เหมือนกัน)  
+    - ansible_ssh_pass คือ ระบุ ssh password แต่ไม่แนะนำ ถ้าจะใช้ให้ใช้ [Ansible Vault](http://docs.ansible.com/ansible/latest/vault.html)
+    - ansible_ssh_private_key_file ระบุ private key นั่นเอง  
+
+* สามารถสร้างตัวแปรใดๆ ขึ้นมา(เผื่อ)เรียกใช้ในภายหลังก็ได้ เพราะมันคือตัวแปร และตัวแปร (Host Variables) ที่ว่า จะใช้ได้เฉพาะ  Host นั้นๆ เท่านั้น ถ้าจะให้มันเป็น Global ต้องไปดูเรื่อง Group ครับ  
+
+### Inventory สามารถ Grouping Host ได้  
+ตัวอย่าง server ที่ผมมี สังเกตุว่ามี สองกลุ่ม คือ web กับ db ฉะนั้นเรามาสามารถ grouping host พวกนี้เข้าด้วยกันได้ครับ โดยใช้ก้ามปูมาครอบ ข้างในนั้นก็จะเป็นชื่อกลุ่ม หรือจะ group ซ้อน group ก็ได้  
+
+* แยกประเภท server
+
+```
+$ cat inventories
+[db-servers]
+db-01  ansible_host=192.168.124.116
+db-02  ansible_host=192.168.124.172
+
+[web-servers]
+web-01  ansible_host=192.168.124.206
+web-02  ansible_host=192.168.124.52
+web-03  ansible_host=192.168.124.110
+```  
+
+* หรือ จัดกลุ่มเพิ่มตามความเหมาะสม (แล้วแต่เลย มีกี่กลุ่มก็ได้)
+```
+$ cat inventories
+[db-servers]
+db-01  ansible_host=192.168.124.116
+db-02  ansible_host=192.168.124.172
+
+[web-servers]
+web-01  ansible_host=192.168.124.206
+web-02  ansible_host=192.168.124.52
+web-03  ansible_host=192.168.124.110
+
+[sout]
+db-01  ansible_host=192.168.124.116
+web-01  ansible_host=192.168.124.206
+web-02  ansible_host=192.168.124.52
+
+[east]
+db-01  ansible_host=192.168.124.116
+web-01  ansible_host=192.168.124.206
+
+[nouth]
+web-03  ansible_host=192.168.124.110
+```  
+* Groups of Groups (ซับซ้อน ซ้อนเงี่ยน เย้ยยยยย)
+```
+[thailand:children]
+east
+nouth
+
+[china:children]
+sout
+
+```  
+
+* Group Variables ก็มีเหมือนกันจ้า  (ตัวแปรก็จะมีผลเฉพาะ group นั้นๆ)
+```
+[web-servers:vars]
+http_port=8080
+https_port=8443
+```  
+
+### Pattern ช่วยให้ชีวิตง่ายขึ้น  
+* ชื่อคล้ายๆ กันยุบรวมกันแล้วใช้ pattern ซะ  
+```
+[db-servers]
+db-[a:f].example.com
+
+[web-servers]
+www[01:50].example.com
+```  
+## สรุป  
+เป็นยังไงกันบ้างครับกับสิ่งที่เรียกว่า **Inventory** อะไรไม่รู้ เยอะแยะไปหมด (จริงๆ มีนิดเดียว แต่ผมทำให้มันเยอะเอง 555) แต่ก็นั่นแหละครับการใช้งาน Ansible มันต้องระบุ Target host ด้วยเสมอ จึงเป็นที่มาว่าทำไมเราต้องมารู้จัก Inventory มีขั้นที่ Advanced กว่านี้คือการใช้งาน [Dynamic Inventory](http://docs.ansible.com/ansible/latest/intro_dynamic_inventory.html) ใครสนใจก็ไปศึกษาต่อได้ (เราจะไม่แตะต้องมัน) Ep.03 เราจะไปทำความรู้จักกับ การรัน Ansible แบบ **Ad-Hoc Commands** มาดูกันว่าจะเป็นอย่างไร (จะได้ใช้งาน Ansible จริงๆ เสียที) แล้วเจอกันครับ บัยส์
